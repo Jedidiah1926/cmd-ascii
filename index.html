@@ -54,7 +54,7 @@
     box-sizing: border-box;
   }
 
-  #save-btn {
+  #save-btn, #save-file-btn, #load-file-btn {
     background: #0c0c0c;
     color: #33ff66;
     border: 1px solid #33ff66;
@@ -64,9 +64,10 @@
     font-size: 13px;
     cursor: pointer;
     text-shadow: 0 0 4px rgba(51,255,102,0.5);
+    white-space: nowrap;
   }
 
-  #save-btn:hover {
+  #save-btn:hover, #save-file-btn:hover, #load-file-btn:hover {
     background: #133620;
   }
 
@@ -76,8 +77,11 @@
     right: 16px;
     z-index: 10;
     display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
     gap: 8px;
     align-items: flex-start;
+    max-width: calc(100vw - 32px);
   }
 
   #settings-wrap {
@@ -145,6 +149,9 @@
 <body>
 
 <div id="btn-group">
+  <button id="save-file-btn">파일 저장</button>
+  <button id="load-file-btn">파일 불러오기</button>
+  <input type="file" id="file-input" accept=".txt,.json" style="display:none">
   <button id="save-btn">PNG 저장</button>
   <div id="settings-wrap">
     <button id="settings-btn" title="설정">⚙</button>
@@ -220,6 +227,44 @@ input.addEventListener('input', () => {
 
 document.addEventListener('click', () => input.focus());
 input.focus();
+
+// ── 파일로 저장 / 불러오기 (txt) ────────────────────────────────
+const saveFileBtn = document.getElementById('save-file-btn');
+const loadFileBtn = document.getElementById('load-file-btn');
+const fileInput = document.getElementById('file-input');
+
+saveFileBtn.addEventListener('click', () => {
+  const blob = new Blob([input.value], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.download = 'ascii-art.txt';
+  link.href = url;
+  link.click();
+  URL.revokeObjectURL(url);
+});
+
+loadFileBtn.addEventListener('click', () => {
+  fileInput.value = ''; // 같은 파일을 다시 선택해도 change가 발생하도록 초기화
+  fileInput.click();
+});
+
+fileInput.addEventListener('change', () => {
+  const file = fileInput.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    input.value = reader.result;
+    if (settings.autosave) {
+      localStorage.setItem(STORAGE_KEY, input.value);
+    }
+    input.focus();
+  };
+  reader.onerror = () => {
+    alert('파일을 불러오지 못했습니다.');
+  };
+  reader.readAsText(file, 'utf-8');
+});
 
 // ── PNG 저장 ────────────────────────────────────────────────
 const saveBtn = document.getElementById('save-btn');
