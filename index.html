@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <title>ASCII ART</title>
 <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/neodgm/neodgm-webfont@latest/neodgm_code/style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   html, body {
     margin: 0;
@@ -19,6 +20,7 @@
     background: #0c0c0c;
     padding: 40px 24px;
     font-family: "Consolas", "Cascadia Mono", "D2Coding", "Courier New", monospace;
+    position: relative;
   }
 
   #text-input {
@@ -35,12 +37,51 @@
     caret-color: #33ff66;
     text-shadow: 0 0 4px rgba(51,255,102,0.5);
   }
+
+  #capture-pre {
+    display: none;
+    width: 100%;
+    min-height: calc(100vh - 80px);
+    margin: 0;
+    background: transparent;
+    color: #33ff66;
+    font-family: 'NeoDunggeunmo Code', "Consolas", "Cascadia Mono", monospace;
+    font-size: 20px;
+    line-height: 1.4;
+    text-shadow: 0 0 4px rgba(51,255,102,0.5);
+    white-space: pre-wrap;
+    word-break: break-word;
+    box-sizing: border-box;
+  }
+
+  #save-btn {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 10;
+    background: #0c0c0c;
+    color: #33ff66;
+    border: 1px solid #33ff66;
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-family: "Consolas", "Cascadia Mono", monospace;
+    font-size: 13px;
+    cursor: pointer;
+    text-shadow: 0 0 4px rgba(51,255,102,0.5);
+  }
+
+  #save-btn:hover {
+    background: #133620;
+  }
 </style>
 </head>
 <body>
 
+<button id="save-btn">PNG 저장</button>
+
 <div class="wrap">
   <textarea id="text-input" autocomplete="off" spellcheck="false" autofocus></textarea>
+  <pre id="capture-pre"></pre>
 </div>
 
 <script>
@@ -60,6 +101,44 @@ input.addEventListener('input', () => {
 
 document.addEventListener('click', () => input.focus());
 input.focus();
+
+// ── PNG 저장 ────────────────────────────────────────────────
+const saveBtn = document.getElementById('save-btn');
+const capturePre = document.getElementById('capture-pre');
+const wrapEl = document.querySelector('.wrap');
+
+saveBtn.addEventListener('click', async () => {
+  // textarea는 캔버스로 잘 캡처되지 않으므로, 같은 스타일의 <pre>로 임시 교체
+  capturePre.textContent = input.value;
+  input.style.display = 'none';
+  capturePre.style.display = 'block';
+  saveBtn.style.visibility = 'hidden';
+
+  try {
+    // 웹폰트(Neo둥근모 Code) 로딩이 끝난 뒤에 캡처해야 폰트가 제대로 찍힘
+    await document.fonts.ready;
+    await document.fonts.load("20px 'NeoDunggeunmo Code'");
+
+    const canvas = await html2canvas(wrapEl, {
+      backgroundColor: '#0c0c0c',
+      scale: 3,
+      useCORS: true
+    });
+
+    const link = document.createElement('a');
+    link.download = 'ascii-art.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  } catch (err) {
+    console.error(err);
+    alert('이미지 저장에 실패했습니다.');
+  } finally {
+    input.style.display = '';
+    capturePre.style.display = 'none';
+    saveBtn.style.visibility = 'visible';
+    input.focus();
+  }
+});
 </script>
 
 </body>
