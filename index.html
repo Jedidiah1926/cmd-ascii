@@ -45,6 +45,19 @@
 
 <script>
 const input = document.getElementById('text-input');
+const STORAGE_KEY = 'ascii-art-text';
+
+// 이전에 저장된 내용 불러오기
+const saved = localStorage.getItem(STORAGE_KEY);
+if (saved !== null) {
+  input.value = saved;
+}
+
+// 입력할 때마다 자동 저장
+input.addEventListener('input', () => {
+  localStorage.setItem(STORAGE_KEY, input.value);
+});
+
 document.addEventListener('click', () => input.focus());
 input.focus();
 </script>
