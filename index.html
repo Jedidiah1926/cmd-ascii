@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>ASCII ART</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #0c0c0c;
+    height: 100%;
+  }
+
+  .wrap {
+    width: 100%;
+    min-height: 100vh;
+    box-sizing: border-box;
+    background: #0c0c0c;
+    padding: 40px 24px;
+    font-family: "Consolas", "Cascadia Mono", "D2Coding", "Courier New", monospace;
+  }
+
+  #text-input {
+    width: 100%;
+    min-height: calc(100vh - 80px);
+    background: transparent;
+    border: none;
+    outline: none;
+    resize: none;
+    color: #33ff66;
+    font-family: inherit;
+    font-size: 20px;
+    line-height: 1.4;
+    caret-color: #33ff66;
+    text-shadow: 0 0 4px rgba(51,255,102,0.5);
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <textarea id="text-input" autocomplete="off" spellcheck="false" autofocus></textarea>
+</div>
+
+<script>
+const input = document.getElementById('text-input');
+document.addEventListener('click', () => input.focus());
+input.focus();
+</script>
+
+</body>
+</html>
