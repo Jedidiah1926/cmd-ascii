@@ -55,10 +55,6 @@
   }
 
   #save-btn {
-    position: fixed;
-    top: 16px;
-    right: 16px;
-    z-index: 10;
     background: #0c0c0c;
     color: #33ff66;
     border: 1px solid #33ff66;
@@ -73,11 +69,92 @@
   #save-btn:hover {
     background: #133620;
   }
+
+  #btn-group {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 10;
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+  }
+
+  #settings-wrap {
+    position: relative;
+  }
+
+  #settings-btn {
+    background: #0c0c0c;
+    color: #33ff66;
+    border: 1px solid #33ff66;
+    border-radius: 6px;
+    width: 34px;
+    height: 34px;
+    font-size: 15px;
+    cursor: pointer;
+    text-shadow: 0 0 4px rgba(51,255,102,0.5);
+    line-height: 1;
+  }
+
+  #settings-btn:hover {
+    background: #133620;
+  }
+
+  #settings-panel {
+    display: none;
+    position: absolute;
+    top: 42px;
+    right: 0;
+    background: #0c0c0c;
+    border: 1px solid #33ff66;
+    border-radius: 6px;
+    padding: 12px 14px;
+    width: 220px;
+    box-shadow: 0 0 15px rgba(0,0,0,0.6);
+  }
+
+  #settings-panel.open {
+    display: block;
+  }
+
+  #settings-panel label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #33ff66;
+    font-family: "Consolas", "Cascadia Mono", monospace;
+    font-size: 12px;
+    margin-bottom: 10px;
+    text-shadow: 0 0 4px rgba(51,255,102,0.5);
+    cursor: pointer;
+  }
+
+  #settings-panel label:last-child {
+    margin-bottom: 0;
+  }
+
+  #settings-panel input[type="checkbox"] {
+    accent-color: #33ff66;
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+  }
 </style>
 </head>
 <body>
 
-<button id="save-btn">PNG 저장</button>
+<div id="btn-group">
+  <button id="save-btn">PNG 저장</button>
+  <div id="settings-wrap">
+    <button id="settings-btn" title="설정">⚙</button>
+    <div id="settings-panel">
+      <label><input type="checkbox" id="opt-autosave">자동 저장</label>
+      <label><input type="checkbox" id="opt-limit-size">5MB 이하로 제한</label>
+      <label><input type="checkbox" id="opt-limit-dim">16,383px 이하로 제한</label>
+    </div>
+  </div>
+</div>
 
 <div class="wrap">
   <textarea id="text-input" autocomplete="off" spellcheck="false" autofocus></textarea>
@@ -87,16 +164,58 @@
 <script>
 const input = document.getElementById('text-input');
 const STORAGE_KEY = 'ascii-art-text';
+const SETTINGS_KEY = 'ascii-art-settings';
 
-// 이전에 저장된 내용 불러오기
-const saved = localStorage.getItem(STORAGE_KEY);
-if (saved !== null) {
-  input.value = saved;
+// ── 설정 불러오기/저장 ──────────────────────────────────────────
+const defaultSettings = { autosave: true, limitSize: true, limitDim: true };
+let settings = defaultSettings;
+try {
+  const savedSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY));
+  if (savedSettings) settings = { ...defaultSettings, ...savedSettings };
+} catch (e) { /* 저장된 설정이 없거나 손상된 경우 기본값 사용 */ }
+
+function saveSettings() {
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
 }
 
-// 입력할 때마다 자동 저장
+const optAutosave = document.getElementById('opt-autosave');
+const optLimitSize = document.getElementById('opt-limit-size');
+const optLimitDim = document.getElementById('opt-limit-dim');
+
+optAutosave.checked = settings.autosave;
+optLimitSize.checked = settings.limitSize;
+optLimitDim.checked = settings.limitDim;
+
+optAutosave.addEventListener('change', () => { settings.autosave = optAutosave.checked; saveSettings(); });
+optLimitSize.addEventListener('change', () => { settings.limitSize = optLimitSize.checked; saveSettings(); });
+optLimitDim.addEventListener('change', () => { settings.limitDim = optLimitDim.checked; saveSettings(); });
+
+// ── 설정 패널 열기/닫기 ──────────────────────────────────────────
+const settingsBtn = document.getElementById('settings-btn');
+const settingsPanel = document.getElementById('settings-panel');
+
+settingsBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  settingsPanel.classList.toggle('open');
+});
+
+document.addEventListener('click', (e) => {
+  if (!settingsPanel.contains(e.target) && e.target !== settingsBtn) {
+    settingsPanel.classList.remove('open');
+  }
+});
+
+// ── 이전에 저장된 내용 불러오기 ──────────────────────────────────
+const savedText = localStorage.getItem(STORAGE_KEY);
+if (savedText !== null) {
+  input.value = savedText;
+}
+
+// 자동 저장 (설정이 켜져 있을 때만)
 input.addEventListener('input', () => {
-  localStorage.setItem(STORAGE_KEY, input.value);
+  if (settings.autosave) {
+    localStorage.setItem(STORAGE_KEY, input.value);
+  }
 });
 
 document.addEventListener('click', () => input.focus());
@@ -104,6 +223,7 @@ input.focus();
 
 // ── PNG 저장 ────────────────────────────────────────────────
 const saveBtn = document.getElementById('save-btn');
+const btnGroup = document.getElementById('btn-group');
 const capturePre = document.getElementById('capture-pre');
 const wrapEl = document.querySelector('.wrap');
 
@@ -112,30 +232,61 @@ saveBtn.addEventListener('click', async () => {
   capturePre.textContent = input.value;
   input.style.display = 'none';
   capturePre.style.display = 'block';
-  saveBtn.style.visibility = 'hidden';
+  btnGroup.style.visibility = 'hidden';
+  saveBtn.textContent = '저장 중...';
 
   try {
     // 웹폰트(Neo둥근모 Code) 로딩이 끝난 뒤에 캡처해야 폰트가 제대로 찍힘
     await document.fonts.ready;
     await document.fonts.load("20px 'NeoDunggeunmo Code'");
 
-    const canvas = await html2canvas(wrapEl, {
-      backgroundColor: '#0c0c0c',
-      scale: 3,
-      useCORS: true
-    });
+    const MAX_BYTES = 5 * 1024 * 1024; // 5MB
+    const MAX_DIM = 16383; // 캔버스 가로/세로 최대 픽셀
+    const rect = wrapEl.getBoundingClientRect();
 
+    let scale = 4; // 최고 화질부터 시작
+    if (settings.limitDim) {
+      const maxScaleByDim = MAX_DIM / Math.max(rect.width, rect.height);
+      scale = Math.min(scale, maxScaleByDim);
+    }
+
+    let blob = null;
+
+    while (scale >= 0.2) {
+      const canvas = await html2canvas(wrapEl, {
+        backgroundColor: '#0c0c0c',
+        scale: scale,
+        useCORS: true
+      });
+
+      // 안전장치: 치수 제한이 켜져 있는데 혹시 넘으면 강제로 스케일 낮춰 재시도
+      if (settings.limitDim && (canvas.width > MAX_DIM || canvas.height > MAX_DIM)) {
+        scale = Math.min(scale, MAX_DIM / Math.max(rect.width, rect.height)) * 0.95;
+        continue;
+      }
+
+      blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+
+      if (!settings.limitSize || (blob && blob.size <= MAX_BYTES)) {
+        break; // 용량 제한이 꺼져 있거나, 5MB 이하면 이 화질로 확정
+      }
+      scale -= 0.5; // 5MB를 넘으면 해상도를 낮춰서 재시도
+    }
+
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.download = 'ascii-art.png';
-    link.href = canvas.toDataURL('image/png');
+    link.href = url;
     link.click();
+    URL.revokeObjectURL(url);
   } catch (err) {
     console.error(err);
     alert('이미지 저장에 실패했습니다.');
   } finally {
     input.style.display = '';
     capturePre.style.display = 'none';
-    saveBtn.style.visibility = 'visible';
+    btnGroup.style.visibility = 'visible';
+    saveBtn.textContent = 'PNG 저장';
     input.focus();
   }
 });
